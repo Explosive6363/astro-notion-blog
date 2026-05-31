@@ -64,6 +64,113 @@ let dbCache: Database | null = null
 
 const numberOfRetry = 2
 
+interface NotionIconObject {
+  type?: string
+  emoji?: string
+  icon?: NotionIconObject
+  name?: string
+  color?: string
+  external?: {
+    url?: string
+  }
+  file?: {
+    url?: string
+  }
+  custom_emoji?: {
+    id?: string
+    name?: string
+    url?: string
+  }
+}
+
+function _buildIcon(iconObject?: NotionIconObject | null): FileObject | Emoji | null {
+  if (!iconObject || !iconObject.type) {
+    return null
+  }
+
+  if (iconObject.type === 'icon') {
+    if (iconObject.icon?.type) {
+      return _buildIcon(iconObject.icon)
+    }
+    // Notion built-in icons may come as { type: 'icon', icon: { name, color } }.
+    // We intentionally ignore this format for now because there is no image URL.
+    console.log('Ignoring unsupported Notion icon payload:', iconObject)
+    return null
+  }
+
+  if (iconObject.type === 'emoji' && iconObject.emoji) {
+    return {
+      Type: iconObject.type,
+      Emoji: iconObject.emoji,
+    }
+  }
+
+  if (iconObject.type === 'external') {
+    return {
+      Type: iconObject.type,
+      Url: iconObject.external?.url || '',
+    }
+  }
+
+  if (iconObject.type === 'file') {
+    return {
+      Type: iconObject.type,
+      Url: iconObject.file?.url || '',
+    }
+  }
+
+  if (iconObject.type === 'custom_emoji') {
+    // Treat custom emoji as an external image URL for rendering.
+    return {
+      Type: 'external',
+      Url: iconObject.custom_emoji?.url || '',
+    }
+  }
+
+  return null
+}
+
+function _buildFileObject(
+  fileObject?: NotionIconObject | null
+): FileObject | null {
+  if (!fileObject || !fileObject.type) {
+    return null
+  }
+
+  if (fileObject.type === 'icon') {
+    if (fileObject.icon?.type) {
+      return _buildFileObject(fileObject.icon)
+    }
+    // Notion built-in icons may come as { type: 'icon', icon: { name, color } }.
+    // We intentionally ignore this format for now because there is no file URL.
+    console.log('Ignoring unsupported Notion file-like icon payload:', fileObject)
+    return null
+  }
+
+  if (fileObject.type === 'external') {
+    return {
+      Type: fileObject.type,
+      Url: fileObject.external?.url || '',
+    }
+  }
+
+  if (fileObject.type === 'file') {
+    return {
+      Type: fileObject.type,
+      Url: fileObject.file?.url || '',
+    }
+  }
+
+  if (fileObject.type === 'custom_emoji') {
+    return {
+      Type: 'external',
+      Url: fileObject.custom_emoji?.url || '',
+    }
+  }
+
+  return null
+}
+
 export async function getAllPosts(): Promise<Post[]> {
   if (postsCache !== null) {
     return Promise.resolve(postsCache)
@@ -474,36 +581,13 @@ export async function getDatabase(): Promise<Database> {
 
   const dataSource = await _getDataSource(res.data_sources?.[0]?.id || '')
 
-  let icon: FileObject | Emoji | null = null
-  if (dataSource.icon) {
-    if (dataSource.icon.type === 'emoji' && 'emoji' in dataSource.icon) {
-      icon = {
-        Type: dataSource.icon.type,
-        Emoji: dataSource.icon.emoji,
-      }
-    } else if (
-      dataSource.icon.type === 'external' &&
-      'external' in dataSource.icon
-    ) {
-      icon = {
-        Type: dataSource.icon.type,
-        Url: dataSource.icon.external?.url || '',
-      }
-    } else if (dataSource.icon.type === 'file' && 'file' in dataSource.icon) {
-      icon = {
-        Type: dataSource.icon.type,
-        Url: dataSource.icon.file?.url || '',
-      }
-    }
-  }
+  const icon =
+    _buildIcon(dataSource.icon as NotionIconObject | null) ||
+    _buildIcon(res.icon as NotionIconObject | null)
 
-  let cover: FileObject | null = null
-  if (dataSource.cover) {
-    cover = {
-      Type: dataSource.cover.type,
-      Url: dataSource.cover.external?.url || dataSource.cover?.file?.url || '',
-    }
-  }
+  const cover =
+    _buildFileObject(dataSource.cover as NotionIconObject | null) ||
+    _buildFileObject(res.cover as NotionIconObject | null)
 
   const database: Database = {
     Title: res.title.map((richText) => richText.plain_text).join(''),
@@ -709,26 +793,9 @@ function _buildBlock(blockObject: responses.BlockObject): Block {
       break
     case 'callout':
       if (blockObject.callout) {
-        let icon: FileObject | Emoji | null = null
-        if (blockObject.callout.icon) {
-          if (
-            blockObject.callout.icon.type === 'emoji' &&
-            'emoji' in blockObject.callout.icon
-          ) {
-            icon = {
-              Type: blockObject.callout.icon.type,
-              Emoji: blockObject.callout.icon.emoji,
-            }
-          } else if (
-            blockObject.callout.icon.type === 'external' &&
-            'external' in blockObject.callout.icon
-          ) {
-            icon = {
-              Type: blockObject.callout.icon.type,
-              Url: blockObject.callout.icon.external?.url || '',
-            }
-          }
-        }
+        const icon = _buildIcon(
+          blockObject.callout.icon as NotionIconObject | null
+        )
 
         const callout: Callout = {
           RichTexts: blockObject.callout.rich_text.map(_buildRichText),
@@ -985,31 +1052,9 @@ function _validPageObject(pageObject: responses.PageObject): boolean {
 function _buildPost(pageObject: responses.PageObject): Post {
   const prop = pageObject.properties
 
-  let icon: FileObject | Emoji | null = null
-  if (pageObject.icon) {
-    if (pageObject.icon.type === 'emoji' && 'emoji' in pageObject.icon) {
-      icon = {
-        Type: pageObject.icon.type,
-        Emoji: pageObject.icon.emoji,
-      }
-    } else if (
-      pageObject.icon.type === 'external' &&
-      'external' in pageObject.icon
-    ) {
-      icon = {
-        Type: pageObject.icon.type,
-        Url: pageObject.icon.external?.url || '',
-      }
-    }
-  }
+  const icon = _buildIcon(pageObject.icon as NotionIconObject | null)
 
-  let cover: FileObject | null = null
-  if (pageObject.cover) {
-    cover = {
-      Type: pageObject.cover.type,
-      Url: pageObject.cover.external?.url || '',
-    }
-  }
+  const cover = _buildFileObject(pageObject.cover as NotionIconObject | null)
 
   let featuredImage: FileObject | null = null
   if (prop.FeaturedImage.files && prop.FeaturedImage.files.length > 0) {

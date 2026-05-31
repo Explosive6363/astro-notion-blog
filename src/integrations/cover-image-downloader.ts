@@ -6,6 +6,7 @@ export default (): AstroIntegration => ({
   hooks: {
     'astro:build:start': async () => {
       const database = await getDatabase()
+      console.log(database)
 
       if (!database.Cover || database.Cover.Type !== 'file') {
         return Promise.resolve()
