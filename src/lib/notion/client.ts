@@ -64,22 +64,58 @@ let dbCache: Database | null = null
 
 const numberOfRetry = 2
 
-interface NotionIconObject {
-  type?: string
-  emoji?: string
-  icon?: NotionIconObject
-  name?: string
-  color?: string
-  external?: {
-    url?: string
+type NotionIconObject =
+  | NotionEmojiObject
+  | NotionNativeIconObject
+  | NotionCustomEmojiObject
+  | NotionFileObject
+
+type NotionFileObject =
+  | NotionExternalFileObject
+  | NotionHostedFileObject
+  | NotionFileUploadObject
+
+interface NotionEmojiObject {
+  type: 'emoji'
+  emoji: string
+}
+
+interface NotionNativeIconObject {
+  type: 'icon'
+  icon: {
+    name: string
+    color?: string
   }
-  file?: {
-    url?: string
+}
+
+interface NotionCustomEmojiObject {
+  type: 'custom_emoji'
+  custom_emoji: {
+    id: string
+    name: string
+    url: string
   }
-  custom_emoji?: {
-    id?: string
-    name?: string
-    url?: string
+}
+
+interface NotionExternalFileObject {
+  type: 'external'
+  external: {
+    url: string
+  }
+}
+
+interface NotionHostedFileObject {
+  type: 'file'
+  file: {
+    url: string
+    expiry_time?: string
+  }
+}
+
+interface NotionFileUploadObject {
+  type: 'file_upload'
+  file_upload: {
+    id: string
   }
 }
 
@@ -89,12 +125,8 @@ function _buildIcon(iconObject?: NotionIconObject | null): FileObject | Emoji | 
   }
 
   if (iconObject.type === 'icon') {
-    if (iconObject.icon?.type) {
-      return _buildIcon(iconObject.icon)
-    }
     // Notion built-in icons may come as { type: 'icon', icon: { name, color } }.
     // We intentionally ignore this format for now because there is no image URL.
-    console.log('Ignoring unsupported Notion icon payload:', iconObject)
     return null
   }
 
@@ -108,14 +140,15 @@ function _buildIcon(iconObject?: NotionIconObject | null): FileObject | Emoji | 
   if (iconObject.type === 'external') {
     return {
       Type: iconObject.type,
-      Url: iconObject.external?.url || '',
+      Url: iconObject.external.url,
     }
   }
 
   if (iconObject.type === 'file') {
     return {
       Type: iconObject.type,
-      Url: iconObject.file?.url || '',
+      Url: iconObject.file.url,
+      ExpiryTime: iconObject.file.expiry_time,
     }
   }
 
@@ -123,7 +156,7 @@ function _buildIcon(iconObject?: NotionIconObject | null): FileObject | Emoji | 
     // Treat custom emoji as an external image URL for rendering.
     return {
       Type: 'external',
-      Url: iconObject.custom_emoji?.url || '',
+      Url: iconObject.custom_emoji.url,
     }
   }
 
@@ -138,9 +171,6 @@ function _buildFileObject(
   }
 
   if (fileObject.type === 'icon') {
-    if (fileObject.icon?.type) {
-      return _buildFileObject(fileObject.icon)
-    }
     // Notion built-in icons may come as { type: 'icon', icon: { name, color } }.
     // We intentionally ignore this format for now because there is no file URL.
     console.log('Ignoring unsupported Notion file-like icon payload:', fileObject)
@@ -150,21 +180,22 @@ function _buildFileObject(
   if (fileObject.type === 'external') {
     return {
       Type: fileObject.type,
-      Url: fileObject.external?.url || '',
+      Url: fileObject.external.url,
     }
   }
 
   if (fileObject.type === 'file') {
     return {
       Type: fileObject.type,
-      Url: fileObject.file?.url || '',
+      Url: fileObject.file.url,
+      ExpiryTime: fileObject.file.expiry_time,
     }
   }
 
   if (fileObject.type === 'custom_emoji') {
     return {
       Type: 'external',
-      Url: fileObject.custom_emoji?.url || '',
+      Url: fileObject.custom_emoji.url,
     }
   }
 

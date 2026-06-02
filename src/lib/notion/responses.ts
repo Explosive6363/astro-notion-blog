@@ -43,6 +43,9 @@ interface FileObject {
   name?: string
   external?: External
   file?: File
+  file_upload?: {
+    id: string
+  }
 }
 
 interface File {
@@ -54,9 +57,28 @@ interface External {
   url: string
 }
 
+type IconObject = FileObject | Emoji | NativeIcon | CustomEmoji
+
 export interface Emoji {
-  type: string
+  type: 'emoji'
   emoji: string
+}
+
+interface NativeIcon {
+  type: 'icon'
+  icon: {
+    name: string
+    color?: string
+  }
+}
+
+interface CustomEmoji {
+  type: 'custom_emoji'
+  custom_emoji: {
+    id: string
+    name: string
+    url: string
+  }
 }
 
 interface Parent {
@@ -135,8 +157,8 @@ interface DatabaseObject {
   data_sources: DataSourceObject[]
   title: RichTextObject[]
   description: RichTextObject[]
-  icon: FileObject | Emoji | null
-  cover: FileObject
+  icon: IconObject | null
+  cover: FileObject | null
   parent: Parent
   url: string
   public_url: string | null
@@ -155,8 +177,8 @@ export interface DataSourceObject {
   last_edited_by: UserObject
   title: RichTextObject[]
   description: RichTextObject[]
-  icon: FileObject | Emoji | null
-  cover: FileObject | Emoji | null
+  icon: IconObject | null
+  cover: FileObject | null
   properties: DataSourceProperties
   parent: Parent
   database_parent: Parent
@@ -262,8 +284,8 @@ export interface PageObject {
   last_edited_time: string
   last_edited_by: UserObject
   in_trash: boolean
-  icon: FileObject | Emoji | null
-  cover: FileObject
+  icon: IconObject | null
+  cover: FileObject | null
   properties: PageProperties
   parent: Parent
   url: string
@@ -393,7 +415,7 @@ interface Heading {
 
 interface Callout {
   rich_text: RichTextObject[]
-  icon: FileObject | Emoji
+  icon: IconObject
   color: string
   children?: BlockObject[]
 }
