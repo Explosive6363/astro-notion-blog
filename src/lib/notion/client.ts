@@ -71,9 +71,7 @@ type NotionIconObject =
   | NotionFileObject
 
 type NotionFileObject =
-  | NotionExternalFileObject
-  | NotionHostedFileObject
-  | NotionFileUploadObject
+  NotionExternalFileObject | NotionHostedFileObject | NotionFileUploadObject
 
 interface NotionEmojiObject {
   type: 'emoji'
@@ -119,7 +117,9 @@ interface NotionFileUploadObject {
   }
 }
 
-function _buildIcon(iconObject?: NotionIconObject | null): FileObject | Emoji | null {
+function _buildIcon(
+  iconObject?: NotionIconObject | null
+): FileObject | Emoji | null {
   if (!iconObject || !iconObject.type) {
     return null
   }
@@ -173,7 +173,10 @@ function _buildFileObject(
   if (fileObject.type === 'icon') {
     // Notion built-in icons may come as { type: 'icon', icon: { name, color } }.
     // We intentionally ignore this format for now because there is no file URL.
-    console.log('Ignoring unsupported Notion file-like icon payload:', fileObject)
+    console.log(
+      'Ignoring unsupported Notion file-like icon payload:',
+      fileObject
+    )
     return null
   }
 
