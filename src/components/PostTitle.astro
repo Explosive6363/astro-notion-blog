@@ -5,14 +5,16 @@ import { getPostLink } from '../lib/blog-helpers.ts'
 export interface Props {
   post: Post
   enableLink: boolean
+  as?: 'h1' | 'h2'
 }
 
-const { post, enableLink = true } = Astro.props
+const { post, enableLink = true, as = 'h2' } = Astro.props
 
+const Tag = as
 let title = post.Title
 ---
 
-<h2 class="post-title">
+<Tag class="post-title">
   {
     enableLink ? (
       <a href={getPostLink(post.Slug)}>
@@ -48,7 +50,7 @@ let title = post.Title
       </>
     )
   }
-</h2>
+</Tag>
 
 <style>
   .post-title {

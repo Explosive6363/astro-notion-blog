@@ -1,0 +1,104 @@
+---
+import Layout from '../layouts/Layout.astro'
+---
+
+<Layout
+  title="プライバシーポリシー"
+  description="出不精の雑書きブログにおけるアクセス解析・Cookie・個人情報の取り扱いについてのページです。"
+  path="/privacy"
+>
+  <div slot="main" class="page">
+    <h2>プライバシーポリシー</h2>
+
+    <p>
+      当サイト（blog.epsv.tech）における、利用者の情報の取り扱いについて
+      以下のとおり定めます。
+    </p>
+
+    <h3>取得する情報</h3>
+    <p>
+      当サイトは、お問い合わせ等でご連絡いただいた場合を除き、氏名・住所・
+      電話番号などの個人を特定できる情報を取得しません。
+    </p>
+
+    <h3>アクセス解析</h3>
+    <p>
+      当サイトでは、サイト改善のために Google Analytics（Google LLC 提供）を
+      利用しています。Google Analytics は Cookie を用いてアクセス情報を収集しますが、
+      収集される情報は匿名で、個人を特定するものではありません。
+    </p>
+    <p>
+      収集されたデータは Google のプライバシーポリシーに従って管理されます。
+      詳細は
+      <a href="https://policies.google.com/privacy?hl=ja"
+        >Google プライバシーポリシー</a
+      >
+      をご確認ください。ブラウザの設定で Cookie を無効にすることで、
+      アクセス解析を拒否できます。
+    </p>
+
+    <h3>ホスティング</h3>
+    <p>
+      当サイトは Cloudflare, Inc. の Cloudflare Pages で配信されています。
+      同サービスでは、セキュリティおよび品質向上のためにアクセスログが
+      記録される場合があります。
+    </p>
+
+    <h3>Cookie</h3>
+    <p>
+      当サイト自体は、ログイン機能やコメント機能を持たず、独自の Cookie を
+      発行していません。ただし、上記のアクセス解析サービスが Cookie を
+      利用する場合があります。
+    </p>
+
+    <h3>第三者提供</h3>
+    <p>
+      法令に基づく場合を除き、取得した情報を第三者へ提供することはありません。
+    </p>
+
+    <h3>免責事項</h3>
+    <p>
+      当サイトからリンクしている外部サイトの内容およびプライバシーについて、
+      当サイトは責任を負いません。各サイトのポリシーをご確認ください。
+    </p>
+
+    <h3>改定</h3>
+    <p>
+      本ポリシーは、必要に応じて予告なく変更することがあります。
+      変更後の内容は当ページに掲載した時点から有効となります。
+    </p>
+
+    <p class="updated">制定日: 2026年10月31日</p>
+  </div>
+</Layout>
+
+<style>
+  .page {
+    padding: 0.5rem 0 1.5rem;
+    max-width: 46rem;
+  }
+  .page h2 {
+    margin: 0.5rem 0 1rem;
+    font-size: 1.5rem;
+    color: var(--fg);
+  }
+  .page h3 {
+    margin: 1.6rem 0 0.4rem;
+    padding-left: 0.5rem;
+    border-left: 4px solid #ccc;
+    font-size: 1.05rem;
+    color: #333;
+  }
+  .page p {
+    margin: 0.4rem 0;
+  }
+  .page a {
+    color: #37352f;
+    text-decoration: underline;
+  }
+  .page .updated {
+    margin-top: 2rem;
+    color: #777;
+    font-size: 0.85rem;
+  }
+</style>

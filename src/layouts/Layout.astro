@@ -2,34 +2,87 @@
 import { PUBLIC_GA_TRACKING_ID, ENABLE_LIGHTBOX } from '../server-constants.ts'
 import { getDatabase } from '../lib/notion/client.ts'
 import { getNavLink, getStaticFilePath, filePath } from '../lib/blog-helpers.ts'
+import { optimizeRemoteImageUrl } from '../lib/image.ts'
 import '../styles/syntax-coloring.css'
 import GoogleAnalytics from '../components/GoogleAnalytics.astro'
 import SearchModal from '../components/SearchModal.astro'
 import SearchButton from '../components/SearchButton.astro'
 
 export interface Props {
-  title: string
-  description: string
-  path: string
-  ogImage: string
+  title?: string
+  description?: string
+  path?: string
+  ogImage?: string
+  type?: 'website' | 'article'
+  noindex?: boolean
+  publishedTime?: string
+  modifiedTime?: string
+  jsonLd?: Record<string, unknown> | Record<string, unknown>[]
+  siteTitleTag?: 'h1' | 'p'
 }
 
-const { title = '', description = '', path = '/', ogImage = '' } = Astro.props
+const {
+  title = '',
+  description = '',
+  path = '/',
+  ogImage = '',
+  type = 'website',
+  noindex = false,
+  publishedTime = '',
+  modifiedTime = '',
+  jsonLd,
+  siteTitleTag = 'h1',
+} = Astro.props
 
 const database = await getDatabase()
 
 const siteTitle = title ? `${title} - ${database.Title}` : database.Title
 const siteDescription = description ? description : database.Description
 const siteURL = new URL(getNavLink(path), Astro.site).toString()
-const siteOGImage = new URL(
+const rootURL = new URL(getNavLink('/'), Astro.site).toString()
+const feedURL = new URL(getStaticFilePath('/feed.xml'), Astro.site).toString()
+const defaultOGImageURL = new URL(
   getStaticFilePath('/default-og-image.png'),
   Astro.site
+)
+const siteOGImage = defaultOGImageURL.toString()
+const SiteTitleTag = siteTitleTag
+
+const organizationId = `${rootURL}#organization`
+const structuredData = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'WebSite',
+      '@id': `${rootURL}#website`,
+      url: rootURL,
+      name: database.Title,
+      description: database.Description,
+      inLanguage: 'ja',
+      publisher: { '@id': organizationId },
+    },
+    {
+      '@type': 'Organization',
+      '@id': organizationId,
+      name: database.Title,
+      url: rootURL,
+      logo: {
+        '@type': 'ImageObject',
+        url: defaultOGImageURL.toString(),
+      },
+    },
+    ...(Array.isArray(jsonLd) ? jsonLd : jsonLd ? [jsonLd] : []),
+  ],
+}
+const structuredDataJSON = JSON.stringify(structuredData).replace(
+  /</g,
+  '\\u003c'
 )
 
 let coverImageURL: string
 if (database.Cover) {
   if (database.Cover.Type === 'external') {
-    coverImageURL = database.Cover.Url
+    coverImageURL = optimizeRemoteImageUrl(database.Cover.Url)
   } else if (database.Cover.Type === 'file') {
     try {
       coverImageURL = filePath(new URL(database.Cover.Url))
@@ -50,30 +103,49 @@ if (database.Icon && database.Icon.Type === 'file') {
 ---
 
 <!DOCTYPE html>
-<html lang="en" prefix="og: https://ogp.me/ns#">
+<html lang="ja" prefix="og: https://ogp.me/ns#">
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="robots" content="max-image-preview:large" />
+    <meta
+      name="robots"
+      content={noindex ? 'noindex, follow' : 'max-image-preview:large'}
+    />
     <meta charset="UTF-8" />
     <meta name="generator" content={Astro.generator} />
     <title>{siteTitle}</title>
     <meta name="description" content={siteDescription} />
     <link rel="canonical" href={siteURL} />
+    <link
+      rel="alternate"
+      type="application/rss+xml"
+      title={database.Title}
+      href={feedURL}
+    />
+    <meta property="og:type" content={type} />
+    <meta property="og:locale" content="ja_JP" />
     <meta property="og:url" content={siteURL} />
     <meta property="og:title" content={siteTitle} />
     <meta property="og:description" content={siteDescription} />
     <meta property="og:site_name" content={database.Title} />
     <meta property="og:image" content={ogImage || siteOGImage} />
+    {
+      type === 'article' && publishedTime && (
+        <meta property="article:published_time" content={publishedTime} />
+      )
+    }
+    {
+      type === 'article' && (modifiedTime || publishedTime) && (
+        <meta
+          property="article:modified_time"
+          content={modifiedTime || publishedTime}
+        />
+      )
+    }
     <meta name="twitter:title" content={siteTitle} />
     <meta name="twitter:description" content={siteDescription} />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:image" content={ogImage || siteOGImage} />
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css"
-      integrity="sha384-vKruj+a13U8yHIkAyGgK1J3ArTLzrFGBbBc0tDp4ad/EyewESeXE/Iv67Aj8gKZ0"
-      crossorigin="anonymous"
-    />
+    <script type="application/ld+json" set:html={structuredDataJSON} />
   </head>
   <body>
     <GoogleAnalytics trackingId={PUBLIC_GA_TRACKING_ID} />
@@ -82,7 +154,12 @@ if (database.Icon && database.Icon.Type === 'file') {
         {
           coverImageURL && (
             <div class="cover">
-              <img src={coverImageURL} alt="Site cover image" loading="lazy" />
+              <img
+                src={coverImageURL}
+                alt="Site cover image"
+                fetchpriority="high"
+                decoding="async"
+              />
             </div>
           )
         }
@@ -92,7 +169,7 @@ if (database.Icon && database.Icon.Type === 'file') {
         <main>
           <div class="content">
             <header>
-              <h1>
+              <SiteTitleTag class="site-title">
                 <a href={getNavLink('/')}>
                   {
                     database.Icon && database.Icon.Type === 'emoji' ? (
@@ -119,7 +196,7 @@ if (database.Icon && database.Icon.Type === 'file') {
                     )
                   }
                 </a>
-              </h1>
+              </SiteTitleTag>
               <div class="description">
                 {database.Description}
               </div>
@@ -134,6 +211,11 @@ if (database.Icon && database.Icon.Type === 'file') {
                   >astro-notion-blog</a
                 >
               </div>
+              <nav class="footer-links" aria-label="サイト情報">
+                <a href={getNavLink('/about')}>このサイトについて</a>
+                <a href={getNavLink('/privacy')}>プライバシーポリシー</a>
+                <a href={feedURL}>RSS</a>
+              </nav>
             </footer>
           </div>
         </main>
@@ -215,34 +297,42 @@ if (database.Icon && database.Icon.Type === 'file') {
   main header {
     padding: 20px 0 20px;
   }
-  main header h1 {
+  main header .site-title {
+    margin: 0;
+    font-size: 2rem;
     font-weight: 700;
+    line-height: 1.2;
     color: #333;
   }
-  main header h1 a {
+  @media (max-width: 640px) {
+    main header .site-title {
+      font-size: 1.6rem;
+    }
+  }
+  main header .site-title a {
     display: block;
     color: inherit;
   }
-  main header h1 a:hover {
+  main header .site-title a:hover {
     color: inherit;
   }
-  main header h1 a span,
-  main header h1 a img {
+  main header .site-title a span,
+  main header .site-title a img {
     display: inline-block;
     font-size: 1.1em;
   }
-  main header h1 a span {
+  main header .site-title a span {
     margin-right: 0.3em;
     margin-left: -0.1rem;
   }
-  main header h1 a img {
+  main header .site-title a img {
     width: 1.2em;
     height: 1.2em;
     margin-right: 0.2em;
     margin-left: -0.3rem;
     vertical-align: sub;
   }
-  main header h1 a img.custom-icon {
+  main header .site-title a img.custom-icon {
     border-radius: var(--radius);
   }
 
@@ -267,6 +357,16 @@ if (database.Icon && database.Icon.Type === 'file') {
   main footer a {
     color: inherit;
     text-decoration: underline;
+  }
+  main footer nav.footer-links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.4rem 1rem;
+    margin-top: 0.4rem;
+  }
+  main footer nav.footer-links a {
+    color: #777;
   }
 </style>
 

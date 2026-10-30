@@ -117,8 +117,105 @@ export const buildURLToHTMLMap = async (
   }, {})
 }
 
+const getBlockRichTexts = (block: Block): RichText[] => {
+  const candidates = [
+    block.Paragraph,
+    block.Heading1,
+    block.Heading2,
+    block.Heading3,
+    block.BulletedListItem,
+    block.NumberedListItem,
+    block.ToDo,
+    block.Quote,
+    block.Callout,
+    block.Toggle,
+  ]
+
+  for (const candidate of candidates) {
+    if (candidate) {
+      return candidate.RichTexts
+    }
+  }
+
+  return []
+}
+
+export const truncateText = (text: string, maxLength: number): string => {
+  const normalized = text.replace(/\s+/g, ' ').trim()
+
+  if (normalized.length <= maxLength) {
+    return normalized
+  }
+
+  return (
+    normalized
+      .slice(0, maxLength)
+      .replace(/[\s、。,.!?！？:：;；]+$/u, '')
+      .trim() + '…'
+  )
+}
+
+export const extractPlainTextFromBlocks = (
+  blocks: Block[],
+  maxLength = 160
+): string => {
+  const chunks: string[] = []
+
+  for (const block of blocks) {
+    const text = getBlockRichTexts(block)
+      .map((richText) => richText.Text?.Content || '')
+      .join('')
+      .replace(/\s+/g, ' ')
+      .trim()
+
+    if (text) {
+      chunks.push(text)
+    }
+
+    if (chunks.join(' ').length >= maxLength) {
+      break
+    }
+  }
+
+  return truncateText(chunks.join(' '), maxLength)
+}
+
+// Notion の Excerpt が空、または検索結果のスニペットとしては短すぎる場合に
+// 本文の冒頭から description を組み立てる。
+export const buildDescription = (
+  excerpt: string,
+  blocks: Block[],
+  fallback: string,
+  maxLength = 120
+): string => {
+  const base = (excerpt || '').replace(/\s+/g, ' ').trim()
+
+  if (base.length >= 60) {
+    return truncateText(base, maxLength)
+  }
+
+  const body = extractPlainTextFromBlocks(blocks, maxLength)
+
+  if (body.length >= 40) {
+    if (base && !body.startsWith(base) && body.length < 60) {
+      return truncateText(`${base} ${body}`, maxLength)
+    }
+    return body
+  }
+
+  if (base) {
+    return base
+  }
+
+  return truncateText(fallback, maxLength)
+}
+
 export const getStaticFilePath = (path: string): string => {
   return pathJoin(BASE_PATH, path)
+}
+
+const ensureTrailingSlash = (path: string): string => {
+  return path.endsWith('/') ? path : `${path}/`
 }
 
 export const getNavLink = (nav: string) => {
@@ -126,27 +223,31 @@ export const getNavLink = (nav: string) => {
     return pathJoin(BASE_PATH, '') + '/'
   }
 
-  return pathJoin(BASE_PATH, nav)
+  return ensureTrailingSlash(pathJoin(BASE_PATH, nav))
 }
 
 export const getPostLink = (slug: string) => {
-  return pathJoin(BASE_PATH, `/posts/${slug}`)
+  return ensureTrailingSlash(pathJoin(BASE_PATH, `/posts/${slug}`))
 }
 
 export const getTagLink = (tag: string) => {
-  return pathJoin(BASE_PATH, `/posts/tag/${encodeURIComponent(tag)}`)
+  return ensureTrailingSlash(
+    pathJoin(BASE_PATH, `/posts/tag/${encodeURIComponent(tag)}`)
+  )
 }
 
 export const getPageLink = (page: number, tag: string) => {
   if (page === 1) {
     return tag ? getTagLink(tag) : pathJoin(BASE_PATH, '/')
   }
-  return tag
-    ? pathJoin(
-        BASE_PATH,
-        `/posts/tag/${encodeURIComponent(tag)}/page/${page.toString()}`
-      )
-    : pathJoin(BASE_PATH, `/posts/page/${page.toString()}`)
+  return ensureTrailingSlash(
+    tag
+      ? pathJoin(
+          BASE_PATH,
+          `/posts/tag/${encodeURIComponent(tag)}/page/${page.toString()}`
+        )
+      : pathJoin(BASE_PATH, `/posts/page/${page.toString()}`)
+  )
 }
 
 export const getDateStr = (date: string) => {

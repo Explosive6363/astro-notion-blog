@@ -1,0 +1,81 @@
+---
+import Layout from '../layouts/Layout.astro'
+import { getStaticFilePath } from '../lib/blog-helpers.ts'
+---
+
+<Layout
+  title="このサイトについて"
+  description="出不精の雑書きブログの運営者・掲載内容・免責事項についてのページです。"
+  path="/about"
+>
+  <div slot="main" class="page">
+    <h2>このサイトについて</h2>
+
+    <p>
+      「出不精の雑書きブログ」は、インフラ・ネットワーク・ソフトウェアまわりの
+      調べたことや試したことを、個人のメモとして書き残しているサイトです。
+    </p>
+
+    <h3>運営者</h3>
+    <p>
+      個人で運営しています。連絡先は
+      <a href="https://github.com/Explosive6363">GitHub</a>
+      までお願いします。
+    </p>
+
+    <h3>掲載している内容</h3>
+    <ul>
+      <li>サーバー・ネットワーク・仮想化などの検証メモ</li>
+      <li>開発環境やツールの設定手順</li>
+      <li>読んだ本や日々の雑記</li>
+    </ul>
+
+    <h3>免責事項</h3>
+    <p>
+      掲載内容は執筆時点の情報であり、正確性・再現性を保証するものではありません。
+      当サイトの情報を参考にしたことによって生じたいかなる損害についても、
+      当サイトおよび運営者は責任を負いかねます。設定の変更やコマンドの実行は、
+      ご自身の環境と責任において行ってください。
+    </p>
+
+    <h3>リンクについて</h3>
+    <p>
+      当サイトはリンクフリーです。引用の際は出典として該当ページへのリンクを
+      掲載していただければ幸いです。
+    </p>
+
+    <h3>更新情報</h3>
+    <p>
+      更新情報は <a href={getStaticFilePath('/feed.xml')}>RSS フィード</a> で配信しています。
+    </p>
+  </div>
+</Layout>
+
+<style>
+  .page {
+    padding: 0.5rem 0 1.5rem;
+    max-width: 46rem;
+  }
+  .page h2 {
+    margin: 0.5rem 0 1rem;
+    font-size: 1.5rem;
+    color: var(--fg);
+  }
+  .page h3 {
+    margin: 1.6rem 0 0.4rem;
+    padding-left: 0.5rem;
+    border-left: 4px solid #ccc;
+    font-size: 1.05rem;
+    color: #333;
+  }
+  .page p {
+    margin: 0.4rem 0;
+  }
+  .page ul {
+    margin: 0.4rem 0;
+  }
+  .page a {
+    color: #37352f;
+    text-decoration: underline;
+  }
+</style>

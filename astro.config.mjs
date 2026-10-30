@@ -36,6 +36,10 @@ const getSite = function () {
 export default defineConfig({
   site: getSite(),
   base: BASE_PATH,
+  trailingSlash: 'always',
+  build: {
+    format: 'directory',
+  },
   integrations: [
     icon(),
     CoverImageDownloader(),

@@ -1,0 +1,64 @@
+---
+import { getNavLink, getTagLink } from '../lib/blog-helpers.ts'
+
+export interface Props {
+  tag?: string
+  title: string
+}
+
+const { tag, title } = Astro.props
+---
+
+<nav class="breadcrumbs" aria-label="パンくずリスト">
+  <ol>
+    <li>
+      <a href={getNavLink('/')}>ホーム</a>
+    </li>
+    {
+      tag && (
+        <li>
+          <a href={getTagLink(tag)}>{tag}</a>
+        </li>
+      )
+    }
+    <li aria-current="page">{title}</li>
+  </ol>
+</nav>
+
+<style>
+  .breadcrumbs {
+    padding: 0.2rem 0 0.4rem;
+    font-size: 0.8rem;
+  }
+  .breadcrumbs ol {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.2rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: inherit;
+    line-height: 1.4rem;
+  }
+  .breadcrumbs li {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    max-width: 100%;
+    color: #777;
+  }
+  .breadcrumbs li + li::before {
+    padding: 0 0.35rem;
+    content: '›';
+    color: #aaa;
+  }
+  .breadcrumbs li:last-child {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .breadcrumbs a {
+    color: inherit;
+    text-decoration: underline;
+  }
+</style>

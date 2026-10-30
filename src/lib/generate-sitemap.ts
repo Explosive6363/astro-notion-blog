@@ -1,6 +1,6 @@
 type SitemapItem = {
   loc: string
-  lastmod: Date
+  lastmod?: Date
 }
 
 function formatDate(date: Date): string {
@@ -12,10 +12,12 @@ function formatDate(date: Date): string {
 
 export function generateSitemap(items: SitemapItem[]) {
   const itemsStr = items
-    .map(
-      ({ loc, lastmod }) =>
-        `<url><loc>${loc}</loc><lastmod>${formatDate(lastmod)}</lastmod></url>`
-    )
+    .map(({ loc, lastmod }) => {
+      const lastmodStr = lastmod
+        ? `<lastmod>${formatDate(lastmod)}</lastmod>`
+        : ''
+      return `<url><loc>${loc}</loc>${lastmodStr}</url>`
+    })
     .join('')
 
   return `<?xml version="1.0" encoding="UTF-8"?>

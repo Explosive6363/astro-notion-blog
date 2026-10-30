@@ -1,0 +1,58 @@
+---
+import Layout from '../layouts/Layout.astro'
+import { getNavLink } from '../lib/blog-helpers.ts'
+---
+
+<Layout
+  title="ページが見つかりません"
+  description="お探しのページは見つかりませんでした。URLが変更または削除された可能性があります。"
+  path="/404"
+  noindex
+>
+  <div slot="main" class="page">
+    <p class="code">404</p>
+    <h2>ページが見つかりません</h2>
+    <p>
+      お探しのページは存在しないか、移動・削除された可能性があります。
+      URL をご確認ください。
+    </p>
+    <p class="links">
+      <a href={getNavLink('/')}>トップページへ戻る</a>
+      <a href={getNavLink('/about')}>このサイトについて</a>
+    </p>
+  </div>
+</Layout>
+
+<style>
+  .page {
+    padding: 3rem 0 4rem;
+    text-align: center;
+  }
+  .page .code {
+    margin: 0;
+    color: #ccc;
+    font-size: 3.5rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .page h2 {
+    margin: 0.5rem 0 1rem;
+    font-size: 1.4rem;
+    color: var(--fg);
+  }
+  .page p {
+    margin: 0.4rem auto;
+    max-width: 34rem;
+  }
+  .page .links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.6rem 1.4rem;
+    margin-top: 1.5rem;
+  }
+  .page .links a {
+    color: #37352f;
+    text-decoration: underline;
+  }
+</style>

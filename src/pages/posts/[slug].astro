@@ -9,14 +9,20 @@ import {
   getBlock,
   getAllTags,
   getAllBlocksByBlockId,
+  getDatabase,
   downloadFile,
 } from '../../lib/notion/client.ts'
 import {
   getPostLink,
+  getTagLink,
+  getNavLink,
   filePath,
   extractTargetBlocks,
+  buildDescription,
 } from '../../lib/blog-helpers.ts'
+import { AUTHOR_NAME } from '../../server-constants.ts'
 import Layout from '../../layouts/Layout.astro'
+import Breadcrumbs from '../../components/Breadcrumbs.astro'
 import PostDate from '../../components/PostDate.astro'
 import PostTags from '../../components/PostTags.astro'
 import PostTitle from '../../components/PostTitle.astro'
@@ -91,21 +97,117 @@ let ogImage = ''
 if (post.FeaturedImage && post.FeaturedImage.Url) {
   ogImage = new URL(filePath(new URL(post.FeaturedImage.Url)), Astro.site)
 }
+
+const database = await getDatabase()
+const siteRoot = new URL(getNavLink('/'), Astro.site).toString()
+const postURL = new URL(getPostLink(post.Slug), Astro.site).toString()
+const publishedTime = new Date(post.Date).toISOString()
+const primaryTag = post.Tags[0]?.name
+const metaDescription = buildDescription(
+  post.Excerpt,
+  blocks,
+  database.Description
+)
+const authorName = AUTHOR_NAME
+
+// 内部リンクを増やすため、タグの重なりが多い記事を優先して関連記事を選ぶ。
+const relatedPosts = allPosts
+  .filter((candidate) => candidate.Slug !== post.Slug)
+  .map((candidate) => ({
+    post: candidate,
+    score: candidate.Tags.filter((tag) =>
+      post.Tags.some((ownTag) => ownTag.name === tag.name)
+    ).length,
+  }))
+  .sort((a, b) => {
+    if (b.score !== a.score) {
+      return b.score - a.score
+    }
+    return new Date(b.post.Date).getTime() - new Date(a.post.Date).getTime()
+  })
+  .slice(0, 4)
+  .map((candidate) => candidate.post)
+
+const blogPostingJsonLd = {
+  '@type': 'BlogPosting',
+  '@id': `${postURL}#article`,
+  headline: post.Title,
+  name: post.Title,
+  description: metaDescription,
+  datePublished: publishedTime,
+  dateModified: publishedTime,
+  inLanguage: 'ja',
+  keywords: post.Tags.map((tag) => tag.name).join(', '),
+  articleSection: post.Tags.map((tag) => tag.name),
+  author: authorName
+    ? {
+        '@type': 'Person',
+        name: authorName,
+      }
+    : {
+        '@type': 'Organization',
+        name: database.Title,
+      },
+  publisher: {
+    '@id': `${siteRoot}#organization`,
+  },
+  mainEntityOfPage: {
+    '@type': 'WebPage',
+    '@id': postURL,
+  },
+  ...(ogImage ? { image: [ogImage] } : {}),
+}
+
+const breadcrumbJsonLd = {
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    {
+      '@type': 'ListItem',
+      position: 1,
+      name: 'ホーム',
+      item: siteRoot,
+    },
+    ...(primaryTag
+      ? [
+          {
+            '@type': 'ListItem',
+            position: 2,
+            name: primaryTag,
+            item: new URL(getTagLink(primaryTag), Astro.site).toString(),
+          },
+        ]
+      : []),
+    {
+      '@type': 'ListItem',
+      position: primaryTag ? 3 : 2,
+      name: post.Title,
+      item: postURL,
+    },
+  ],
+}
 ---
 
 <Layout
   title={post.Title}
-  description={post.Excerpt}
+  description={metaDescription}
   path={getPostLink(post.Slug)}
   ogImage={ogImage}
+  type="article"
+  publishedTime={publishedTime}
+  modifiedTime={publishedTime}
+  siteTitleTag="p"
+  jsonLd={[blogPostingJsonLd, breadcrumbJsonLd]}
 >
   <div slot="main" class={styles.main}>
     <div class={styles.post}>
+      <Breadcrumbs tag={primaryTag} title={post.Title} />
       <PostDate post={post} />
       <PostTags post={post} />
-      <PostTitle post={post} enableLink={false} />
+      <PostTitle post={post} enableLink={false} as="h1" />
       <PostBody blocks={blocks} />
       <PostTags post={post} />
+
+      <BlogPostsLink heading="関連記事" posts={relatedPosts} />
 
       <footer>
         <PostRelativeLink prevPost={prevPost} nextPost={nextPost} />
